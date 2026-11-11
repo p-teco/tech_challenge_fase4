@@ -9,6 +9,7 @@ O Chroma foi escolhido para armazenar localmente os vetores, os comentários e s
 ## Estrutura
 
 - `scripts/`: scripts para exploração, preparação e busca das avaliações.
+- `avaliacao/`: exemplos para avaliar as respostas geradas.
 
 ## Exploração das avaliações
 
@@ -51,4 +52,16 @@ Para indexar uma amostra de 20 avaliações e consultar os resultados:
 .\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_amostra --limite 20
 .\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_amostra "Quais problemas ocorreram na entrega?"
 ```
+
+## Avaliação de respostas
+
+O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo. A variável de ambiente `NVIDIA_API_KEY` deve estar configurada antes da execução.
+
+```powershell
+python avaliacao/avaliar_respostas_nvidia.py --modelo nvidia/nemotron-3.5-super-vl-120b-a12b
+```
+
+Para avaliar outro modelo disponível na API, informe seu identificador com `--modelo`.
+
+As respostas devem ser examinadas para verificar se citam as evidências e reconhecem quando elas são insuficientes.
 
