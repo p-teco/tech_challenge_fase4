@@ -96,3 +96,11 @@ Para avaliar a recuperação e a geração de respostas em conjunto, use o banco
 ```
 
 A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
+
+### Comparação da recuperação
+
+O comando apresenta os primeiros 50 resultados em grupos de 1 a 10, 11 a 25 e 26 a 50, permitindo comparar a relevância dos comentários recuperados:
+
+```powershell
+.\.venv\Scripts\python.exe avaliacao/comparar_recuperacao.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+```

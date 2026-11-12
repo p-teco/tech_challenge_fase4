@@ -7,7 +7,9 @@ import chromadb
 from indexar_avaliacoes import MODELO, gerar_embeddings
 
 
-def buscar(caminho, pergunta):
+def buscar(caminho, pergunta, limite=5):
+    if limite <= 0:
+        raise ValueError("O limite deve ser maior que zero.")
     if not caminho.is_dir():
         raise FileNotFoundError(f"Banco não encontrado: {caminho}")
     banco = chromadb.PersistentClient(path=str(caminho))
@@ -17,7 +19,7 @@ def buscar(caminho, pergunta):
     if not colecao.count():
         return []
     vetor = gerar_embeddings([f"task: question answering | query: {pergunta}"])[0]
-    resultados = colecao.query(query_embeddings=[vetor], n_results=min(5, colecao.count()), include=["documents", "metadatas", "distances"])
+    resultados = colecao.query(query_embeddings=[vetor], n_results=min(limite, colecao.count()), include=["documents", "metadatas", "distances"])
     return [
         {"texto": texto, "metadados": metadados, "distancia": distancia}
         for texto, metadados, distancia in zip(resultados["documents"][0], resultados["metadatas"][0], resultados["distances"][0])
