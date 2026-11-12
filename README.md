@@ -66,7 +66,7 @@ Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 O objetivo é verificar se o modelo fundamenta as respostas nas avaliações fornecidas e reconhece situações sem evidências suficientes.
 
-O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo. A variável de ambiente `NVIDIA_API_KEY` deve estar configurada antes da execução.
+O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo.
 
 ```powershell
 python avaliacao/avaliar_respostas_nvidia.py --modelo nvidia/nemotron-3.5-super-vl-120b-a12b
@@ -88,14 +88,17 @@ Os resultados são de uma execução com exemplos fictícios e podem variar entr
 
 O objetivo é verificar se a busca recupera avaliações úteis e se a resposta gerada é coerente com os relatos recuperados.
 
-Para avaliar a recuperação e a geração de respostas em conjunto, use o banco indexado e configure a variável `NVIDIA_API_KEY`:
+Para avaliar a recuperação e a geração de respostas em conjunto, use o banco indexado:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Qual é a cotação do dólar hoje?"
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas de entrega são mais frequentes em toda a base?"
 ```
 
 A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
+
+A busca retorna um conjunto limitado de avaliações relevantes e não calcula totais ou frequências de temas em toda a base.
 
 ### Comparação da recuperação
 
