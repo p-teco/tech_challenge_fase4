@@ -52,11 +52,12 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Para indexar uma amostra das primeiras 500 avaliações e consultar os resultados:
+Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_amostra_500 --limite 500
-.\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_amostra_500 "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_completo --limite 42687
+.\.venv\Scripts\python.exe scripts/verificar_indice.py data/avaliacoes.jsonl data/chroma_completo
+.\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 ```
 
 ## Avaliação
@@ -71,7 +72,7 @@ O script abaixo consulta a API da NVIDIA com três situações fictícias: evid�
 python avaliacao/avaliar_respostas_nvidia.py --modelo nvidia/nemotron-3.5-super-vl-120b-a12b
 ```
 
-Para avaliar outro modelo disponível na API, informe seu identificador com `--modelo`.
+Para avaliar outro modelo disponível na API, informe o identificador com `--modelo`.
 
 Em uma execução com o Nemotron 3.5 Super, as respostas foram:
 
@@ -87,11 +88,11 @@ Os resultados são de uma execução com exemplos fictícios e podem variar entr
 
 O objetivo é verificar se a busca recupera avaliações úteis e se a resposta gerada é coerente com os relatos recuperados.
 
-Para avaliar a recuperação e a geração de respostas em conjunto, use a amostra de 500 avaliações indexada e configure a variável `NVIDIA_API_KEY`:
+Para avaliar a recuperação e a geração de respostas em conjunto, use o banco indexado e configure a variável `NVIDIA_API_KEY`:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/responder.py data/chroma_amostra_500 "Quais problemas ocorreram na entrega?"
-.\.venv\Scripts\python.exe scripts/responder.py data/chroma_amostra_500 "Qual é a cotação do dólar hoje?"
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Qual é a cotação do dólar hoje?"
 ```
 
 A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
