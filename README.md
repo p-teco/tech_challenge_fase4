@@ -21,7 +21,7 @@ python scripts/explorar_avaliacoes.py caminho/olist_order_reviews_dataset.csv
 
 O script apresenta a quantidade de registros, o preenchimento dos campos, a presença e o tamanho dos textos, a distribuição das notas e a repetição de identificadores. Ele utiliza apenas bibliotecas da instalação padrão do Python e não altera a base.
 
-Para a construção da base de conhecimento, serão consideradas as avaliações com título ou mensagem. Cada avaliação será tratada como um documento, preservando `review_id` e `order_id` para rastrear as evidências. Foram identificados valores de `review_id` repetidos, enquanto a combinação dos dois campos é única nos registros selecionados.
+Na base de conhecimento, cada avaliação com título ou mensagem é tratada como um documento. Os campos `review_id` e `order_id` identificam a avaliação e permitem rastrear as evidências. Alguns valores de `review_id` se repetem, mas a combinação dos dois campos é única nos registros selecionados.
 
 Avaliações sem título e sem mensagem ficam fora da base textual porque a nota, isoladamente, não explica os motivos de satisfação ou insatisfação. Elas podem contribuir para análises quantitativas, mas não fornecem relatos para fundamentar as respostas do RAG.
 
@@ -35,25 +35,35 @@ python scripts/preparar_avaliacoes.py caminho/olist_order_reviews_dataset.csv da
 
 Cada linha contém os identificadores da avaliação e do pedido, a nota e o texto formado pelo título e pela mensagem disponíveis. O script interrompe a preparação se faltar um identificador, se um par se repetir ou se a nota for inválida.
 
-A nota pode ajudar a contextualizar comentários ambíguos, inclusive quando parecem positivos apesar de uma avaliação baixa. Ainda assim, ela não comprova ironia nem explica, por si só o motivo da satisfação ou insatisfação.
+A nota pode ajudar a contextualizar comentários ambíguos, inclusive quando parecem positivos apesar de uma avaliação baixa. Ainda assim, ela não comprova ironia nem explica, por si só, o motivo da satisfação ou insatisfação.
 
 ## Indexação e busca local
 
-Com o Ollama em execução e o modelo `embeddinggemma-2:270m` instalado, crie um ambiente virtual e instale as dependências:
+Instale o [Ollama para Windows](https://docs.ollama.com/windows), inicie o aplicativo e baixe o modelo usado para gerar embeddings:
+
+```powershell
+ollama pull embeddinggemma-2:270m
+```
+
+Com o Ollama em execução, crie um ambiente virtual e instale as dependências:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Para indexar uma amostra de 20 avaliações e consultar os resultados:
+Para indexar uma amostra das primeiras 500 avaliações e consultar os resultados:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_amostra --limite 20
-.\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_amostra "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_amostra_500 --limite 500
+.\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_amostra_500 "Quais problemas ocorreram na entrega?"
 ```
 
-## Avaliação de respostas
+## Avaliação
+
+### Modelo de linguagem
+
+O objetivo é verificar se o modelo fundamenta as respostas nas avaliações fornecidas e reconhece situações sem evidências suficientes.
 
 O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo. A variável de ambiente `NVIDIA_API_KEY` deve estar configurada antes da execução.
 
@@ -62,8 +72,6 @@ python avaliacao/avaliar_respostas_nvidia.py --modelo nvidia/nemotron-3.5-super-
 ```
 
 Para avaliar outro modelo disponível na API, informe seu identificador com `--modelo`.
-
-As respostas devem ser examinadas para verificar se citam as evidências e reconhecem quando elas são insuficientes.
 
 Em uma execução com o Nemotron 3.5 Super, as respostas foram:
 
@@ -75,3 +83,15 @@ Em uma execução com o Nemotron 3.5 Super, as respostas foram:
 
 Os resultados são de uma execução com exemplos fictícios e podem variar entre chamadas.
 
+### Fluxo integrado
+
+O objetivo é verificar se a busca recupera avaliações úteis e se a resposta gerada é coerente com os relatos recuperados.
+
+Para avaliar a recuperação e a geração de respostas em conjunto, use a amostra de 500 avaliações indexada e configure a variável `NVIDIA_API_KEY`:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_amostra_500 "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_amostra_500 "Qual é a cotação do dólar hoje?"
+```
+
+A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
