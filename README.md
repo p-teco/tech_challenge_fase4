@@ -78,9 +78,9 @@ Em uma execução com o Nemotron 3.5 Super, as respostas foram:
 
 | Caso | Resposta |
 | --- | --- |
-| Com evidência | O problema foi um atraso na entrega: o pedido chegou duas semanas atrasado. [A1] |
-| Evidência insuficiente | Não é possível responder por que o pedido atrasou com base nas avaliações disponíveis. A avaliação [A1] apenas informa que o pedido chegou duas semanas atrasado, mas não menciona o motivo do atraso. |
-| Fora do escopo | Não é possível responder com os dados disponíveis. A avaliação fornecida ([A1]) trata de produto e entrega e não contém informações sobre a cotação do dólar. |
+| Com evidência | O problema relatado foi que o pedido chegou duas semanas atrasado. [A1] |
+| Evidência insuficiente | Não é possível informar o motivo do atraso com base nas avaliações disponíveis. A avaliação [A1] apenas relata que o pedido chegou duas semanas atrasado, sem indicar a causa desse atraso. |
+| Fora do escopo | Não é possível responder com os dados disponíveis. A avaliação [A1] trata apenas da satisfação com o produto e a entrega, não contendo informações sobre cotação do dólar ou valores financeiros. |
 
 Os resultados são de uma execução com exemplos fictícios e podem variar entre chamadas.
 
