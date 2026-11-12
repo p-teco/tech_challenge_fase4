@@ -21,7 +21,7 @@ python scripts/explorar_avaliacoes.py caminho/olist_order_reviews_dataset.csv
 
 O script apresenta a quantidade de registros, o preenchimento dos campos, a presença e o tamanho dos textos, a distribuição das notas e a repetição de identificadores. Ele utiliza apenas bibliotecas da instalação padrão do Python e não altera a base.
 
-Para a construção da base de conhecimento, serão consideradas as avaliações com título ou mensagem. Cada avaliação será tratada como um documento, preservando `review_id` e `order_id` para rastrear as evidências. Foram identificados valores de `review_id` repetidos, enquanto a combinação dos dois campos é única nos registros selecionados.
+Na base de conhecimento, cada avaliação com título ou mensagem é tratada como um documento. Os campos `review_id` e `order_id` identificam a avaliação e permitem rastrear as evidências. Alguns valores de `review_id` se repetem, mas a combinação dos dois campos é única nos registros selecionados.
 
 Avaliações sem título e sem mensagem ficam fora da base textual porque a nota, isoladamente, não explica os motivos de satisfação ou insatisfação. Elas podem contribuir para análises quantitativas, mas não fornecem relatos para fundamentar as respostas do RAG.
 
@@ -35,25 +35,36 @@ python scripts/preparar_avaliacoes.py caminho/olist_order_reviews_dataset.csv da
 
 Cada linha contém os identificadores da avaliação e do pedido, a nota e o texto formado pelo título e pela mensagem disponíveis. O script interrompe a preparação se faltar um identificador, se um par se repetir ou se a nota for inválida.
 
-A nota pode ajudar a contextualizar comentários ambíguos, inclusive quando parecem positivos apesar de uma avaliação baixa. Ainda assim, ela não comprova ironia nem explica, por si só o motivo da satisfação ou insatisfação.
+A nota pode ajudar a contextualizar comentários ambíguos, inclusive quando parecem positivos apesar de uma avaliação baixa. Ainda assim, ela não comprova ironia nem explica, por si só, o motivo da satisfação ou insatisfação.
 
 ## Indexação e busca local
 
-Com o Ollama em execução e o modelo `embeddinggemma-2:270m` instalado, crie um ambiente virtual e instale as dependências:
+Instale o [Ollama para Windows](https://docs.ollama.com/windows), inicie o aplicativo e baixe o modelo usado para gerar embeddings:
+
+```powershell
+ollama pull embeddinggemma-2:270m
+```
+
+Com o Ollama em execução, crie um ambiente virtual e instale as dependências:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Para indexar uma amostra de 20 avaliações e consultar os resultados:
+Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_amostra --limite 20
-.\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_amostra "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_completo --limite 42687
+.\.venv\Scripts\python.exe scripts/verificar_indice.py data/avaliacoes.jsonl data/chroma_completo
+.\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 ```
 
-## Avaliação de respostas
+## Avaliação
+
+### Modelo de linguagem
+
+O objetivo é verificar se o modelo fundamenta as respostas nas avaliações fornecidas e reconhece situações sem evidências suficientes.
 
 O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo. A variável de ambiente `NVIDIA_API_KEY` deve estar configurada antes da execução.
 
@@ -61,7 +72,45 @@ O script abaixo consulta a API da NVIDIA com três situações fictícias: evid�
 python avaliacao/avaliar_respostas_nvidia.py --modelo nvidia/nemotron-3.5-super-vl-120b-a12b
 ```
 
-Para avaliar outro modelo disponível na API, informe seu identificador com `--modelo`.
+Para avaliar outro modelo disponível na API, informe o identificador com `--modelo`.
 
-As respostas devem ser examinadas para verificar se citam as evidências e reconhecem quando elas são insuficientes.
+Em uma execução com o Nemotron 3.5 Super, as respostas foram:
 
+| Caso | Resposta |
+| --- | --- |
+| Com evidência | O problema relatado foi que o pedido chegou duas semanas atrasado. [A1] |
+| Evidência insuficiente | Não é possível informar o motivo do atraso com base nas avaliações disponíveis. A avaliação [A1] apenas relata que o pedido chegou duas semanas atrasado, sem indicar a causa desse atraso. |
+| Fora do escopo | Não é possível responder com os dados disponíveis. A avaliação [A1] trata apenas da satisfação com o produto e a entrega, não contendo informações sobre cotação do dólar ou valores financeiros. |
+
+Os resultados são de uma execução com exemplos fictícios e podem variar entre chamadas.
+
+### Fluxo integrado
+
+O objetivo é verificar se a busca recupera avaliações úteis e se a resposta gerada é coerente com os relatos recuperados.
+
+Para avaliar a recuperação e a geração de respostas em conjunto, use o banco indexado e configure a variável `NVIDIA_API_KEY`:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Qual é a cotação do dólar hoje?"
+```
+
+A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
+
+### Comparação da recuperação
+
+O comando apresenta os primeiros 50 resultados em grupos de 1 a 10, 11 a 25 e 26 a 50, permitindo comparar a relevância dos comentários recuperados:
+
+```powershell
+.\.venv\Scripts\python.exe avaliacao/comparar_recuperacao.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+```
+
+Para comparar as respostas geradas com 10, 25 e 50 avaliações recuperadas execute:
+
+```powershell
+.\.venv\Scripts\python.exe avaliacao/comparar_respostas.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+```
+
+O comando envia três requisições à API da NVIDIA e apresenta as respostas e as avaliações recuperadas para comparação.
+
+Decidi escolher até 25 avaliações por pergunta. Esse limite foi escolhido após uma comparação inicial com 10, 25 e 50 resultados, para equilibrar a variedade de relatos e o tamanho do contexto enviado ao modelo.
