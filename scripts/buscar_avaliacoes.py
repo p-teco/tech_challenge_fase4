@@ -7,7 +7,7 @@ import chromadb
 from indexar_avaliacoes import MODELO, gerar_embeddings
 
 
-def buscar(caminho, pergunta, limite=5):
+def buscar(caminho, pergunta, limite=25):
     if limite <= 0:
         raise ValueError("O limite deve ser maior que zero.")
     if not caminho.is_dir():

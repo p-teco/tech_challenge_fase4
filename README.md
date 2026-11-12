@@ -104,3 +104,13 @@ O comando apresenta os primeiros 50 resultados em grupos de 1 a 10, 11 a 25 e 26
 ```powershell
 .\.venv\Scripts\python.exe avaliacao/comparar_recuperacao.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 ```
+
+Para comparar as respostas geradas com 10, 25 e 50 avaliações recuperadas execute:
+
+```powershell
+.\.venv\Scripts\python.exe avaliacao/comparar_respostas.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+```
+
+O comando envia três requisições à API da NVIDIA e apresenta as respostas e as avaliações recuperadas para comparação.
+
+Decidi escolher até 25 avaliações por pergunta. Esse limite foi escolhido após uma comparação inicial com 10, 25 e 50 resultados, para equilibrar a variedade de relatos e o tamanho do contexto enviado ao modelo.
