@@ -2,9 +2,17 @@
 
 Projeto de análise de avaliações de clientes da Olist com recuperação de informações e geração de respostas fundamentadas em evidências.
 
-## Banco vetorial
+## Arquitetura
 
-O Chroma foi escolhido para armazenar localmente os vetores, os comentários e seus metadados, permitindo recuperar as evidências sem configurar um servidor separado.
+As avaliações com título ou mensagem são preparadas com suas notas e identificadores. O EmbeddingGemma gera um vetor para cada texto, e o Chroma armazena os vetores, textos e metadados localmente.
+
+Ao receber uma pergunta, a aplicação gera seu vetor com o mesmo modelo e busca até 25 avaliações próximas no Chroma. A pergunta e as avaliações recuperadas são enviadas ao Nemotron pela API da NVIDIA para gerar uma resposta com referências. A aplicação também apresenta os textos e identificadores das avaliações recuperadas.
+
+## Tecnologias
+
+- **EmbeddingGemma 2 270M com Ollama:** geração local de embeddings para indexação e busca. O modelo recuperou relatos pertinentes nas consultas avaliadas.
+- **Chroma:** armazenamento e busca vetorial locais, sem necessidade de configurar um servidor separado.
+- **Nemotron 3.5 Super pela API da NVIDIA:** geração das respostas a partir dos relatos recuperados. O modelo respondeu aos casos de avaliação executados no projeto.
 
 ## Estrutura
 
@@ -15,13 +23,15 @@ O Chroma foi escolhido para armazenar localmente os vetores, os comentários e s
 
 Com Python 3 instalado, execute o comando abaixo informando o caminho para o arquivo de avaliações da base Olist:
 
+Baixe a base no [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data) e extraia o arquivo `olist_order_reviews_dataset.csv`.
+
 ```powershell
 python scripts/explorar_avaliacoes.py caminho/olist_order_reviews_dataset.csv
 ```
 
-O script apresenta a quantidade de registros, o preenchimento dos campos, a presença e o tamanho dos textos, a distribuição das notas e a repetição de identificadores. Ele utiliza apenas bibliotecas da instalação padrão do Python e não altera a base.
+O script apresenta a quantidade de registros, o preenchimento dos campos, a presença e o tamanho dos textos, a distribuição das notas e a repetição de identificadores. Ele utiliza apenas bibliotecas da instalação padrão do Python e não altera nada na base.
 
-Na base de conhecimento, cada avaliação com título ou mensagem é tratada como um documento. Os campos `review_id` e `order_id` identificam a avaliação e permitem rastrear as evidências. Alguns valores de `review_id` se repetem, mas a combinação dos dois campos é única nos registros selecionados.
+Cada avaliação com título ou mensagem é tratada como um documento. Os campos `review_id` e `order_id` identificam a avaliação e permitem rastrear as evidências. Alguns valores de `review_id` se repetem, mas a combinação dos dois campos é única nos registros selecionados.
 
 Avaliações sem título e sem mensagem ficam fora da base textual porque a nota, isoladamente, não explica os motivos de satisfação ou insatisfação. Elas podem contribuir para análises quantitativas, mas não fornecem relatos para fundamentar as respostas do RAG.
 
@@ -34,6 +44,8 @@ python scripts/preparar_avaliacoes.py caminho/olist_order_reviews_dataset.csv da
 ```
 
 Cada linha contém os identificadores da avaliação e do pedido, a nota e o texto formado pelo título e pela mensagem disponíveis. O script interrompe a preparação se faltar um identificador, se um par se repetir ou se a nota for inválida.
+
+Na preparação, espaços no início e no fim dos campos são removidos. Títulos ou mensagens ausentes são ignorados; quando ambos estão ausentes, a avaliação não é incluída. Os demais textos são preservados.
 
 A nota pode ajudar a contextualizar comentários ambíguos, inclusive quando parecem positivos apesar de uma avaliação baixa. Ainda assim, ela não comprova ironia nem explica, por si só, o motivo da satisfação ou insatisfação.
 
@@ -56,9 +68,30 @@ Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_completo --limite 42687
+
+
 .\.venv\Scripts\python.exe scripts/verificar_indice.py data/avaliacoes.jsonl data/chroma_completo
+
+
 .\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 ```
+
+Na base utilizada, foram preparados e indexados 42.687 documentos. A verificação dos identificadores não encontrou documentos ausentes nem extras no índice.
+
+## Configuração da API NVIDIA
+
+Para gerar respostas, obtenha uma chave de API na [NVIDIA](https://build.nvidia.com/) e configure a variável na sessão do PowerShell:
+
+```powershell
+$chaveSegura = Read-Host "Chave da API NVIDIA" -AsSecureString
+$ponteiroChave = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($chaveSegura)
+try {
+    $env:NVIDIA_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ponteiroChave)
+} finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ponteiroChave)
+}
+```
+
 
 ## Avaliação
 
@@ -66,7 +99,7 @@ Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 O objetivo é verificar se o modelo fundamenta as respostas nas avaliações fornecidas e reconhece situações sem evidências suficientes.
 
-O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo. A variável de ambiente `NVIDIA_API_KEY` deve estar configurada antes da execução.
+O script abaixo consulta a API da NVIDIA com três situações fictícias: evidência suficiente, evidência insuficiente e pergunta fora do escopo.
 
 ```powershell
 python avaliacao/avaliar_respostas_nvidia.py --modelo nvidia/nemotron-3.5-super-vl-120b-a12b
@@ -88,14 +121,25 @@ Os resultados são de uma execução com exemplos fictícios e podem variar entr
 
 O objetivo é verificar se a busca recupera avaliações úteis e se a resposta gerada é coerente com os relatos recuperados.
 
-Para avaliar a recuperação e a geração de respostas em conjunto, use o banco indexado e configure a variável `NVIDIA_API_KEY`:
+Use o banco indexado para avaliar a recuperação e a geração de respostas:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais aspectos da experiência de compra os clientes elogiam?"
+
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Qual é a cotação do dólar hoje?"
+
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas de entrega são mais frequentes em toda a base?"
 ```
 
-A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
+O Script recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
+
+A busca retorna um conjunto limitado de avaliações relevantes e não calcula totais ou frequências de temas em toda a base.
+
+Nos testes com o índice completo, a pergunta sobre elogios retornou relatos de atendimento, produtos e entrega com referências às avaliações. Na pergunta sobre cotação do dólar, a busca retornou comentários sobre preços, e a resposta informou que eles não continham dados cambiais. Para a pergunta sobre frequência em toda a base, informou que não era possível calcular o ranking a partir dos resultados recuperados.
+
+Em uma execução da pergunta sobre elogios, a resposta incluiu o trecho: “Uma avaliação cita especificamente ‘interesse em agradar o cliente’ [A6].” A avaliação [A6] recuperada continha: “Interesse em agradar o cliente e ótima mercadoria” (`review_id`: `5f2f81b2c6f71fce0db3c57d0674512f`; `order_id`: `9eedaa8643ebca26e894f58017d00970`). A resposta e a ordem das avaliações podem variar entre execuções.
 
 ### Comparação da recuperação
 
