@@ -92,6 +92,7 @@ Para avaliar a recuperação e a geração de respostas em conjunto, use o banco
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+.\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais aspectos da experiência de compra os clientes elogiam?"
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Qual é a cotação do dólar hoje?"
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas de entrega são mais frequentes em toda a base?"
 ```
@@ -99,6 +100,8 @@ Para avaliar a recuperação e a geração de respostas em conjunto, use o banco
 A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
 
 A busca retorna um conjunto limitado de avaliações relevantes e não calcula totais ou frequências de temas em toda a base.
+
+Nos testes com o índice completo, a pergunta sobre elogios retornou relatos de atendimento, produtos e entrega com referências às avaliações. Na pergunta sobre cotação do dólar, a resposta informou que os comentários não continham dados cambiais. Para a pergunta sobre frequência em toda a base, informou que não era possível calcular o ranking a partir dos resultados recuperados.
 
 ### Comparação da recuperação
 
