@@ -2,9 +2,17 @@
 
 Projeto de análise de avaliações de clientes da Olist com recuperação de informações e geração de respostas fundamentadas em evidências.
 
-## Banco vetorial
+## Arquitetura
 
-O Chroma foi escolhido para armazenar localmente os vetores, os comentários e seus metadados, permitindo recuperar as evidências sem configurar um servidor separado.
+As avaliações com título ou mensagem são preparadas com suas notas e identificadores. O EmbeddingGemma gera um vetor para cada texto, e o Chroma armazena os vetores, textos e metadados localmente.
+
+Ao receber uma pergunta, a aplicação gera seu vetor com o mesmo modelo e busca até 25 avaliações próximas no Chroma. A pergunta e as avaliações recuperadas são enviadas ao Nemotron pela API da NVIDIA para gerar uma resposta com referências. A aplicação também apresenta os textos e identificadores das avaliações recuperadas.
+
+## Tecnologias
+
+- **EmbeddingGemma 2 270M com Ollama:** geração local de embeddings para indexação e busca. O modelo recuperou relatos pertinentes nas consultas avaliadas.
+- **Chroma:** armazenamento e busca vetorial locais, sem necessidade de configurar um servidor separado.
+- **Nemotron 3.5 Super pela API da NVIDIA:** geração das respostas a partir dos relatos recuperados. O modelo respondeu aos casos de avaliação executados no projeto.
 
 ## Estrutura
 
@@ -15,13 +23,16 @@ O Chroma foi escolhido para armazenar localmente os vetores, os comentários e s
 
 Com Python 3 instalado, execute o comando abaixo informando o caminho para o arquivo de avaliações da base Olist:
 
+Base disponivel em [Kaggle](
+https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data)
+
 ```powershell
 python scripts/explorar_avaliacoes.py caminho/olist_order_reviews_dataset.csv
 ```
 
-O script apresenta a quantidade de registros, o preenchimento dos campos, a presença e o tamanho dos textos, a distribuição das notas e a repetição de identificadores. Ele utiliza apenas bibliotecas da instalação padrão do Python e não altera a base.
+O script apresenta a quantidade de registros, o preenchimento dos campos, a presença e o tamanho dos textos, a distribuição das notas e a repetição de identificadores. Ele utiliza apenas bibliotecas da instalação padrão do Python e não altera nada na base.
 
-Na base de conhecimento, cada avaliação com título ou mensagem é tratada como um documento. Os campos `review_id` e `order_id` identificam a avaliação e permitem rastrear as evidências. Alguns valores de `review_id` se repetem, mas a combinação dos dois campos é única nos registros selecionados.
+Cada avaliação com título ou mensagem é tratada como um documento. Os campos `review_id` e `order_id` identificam a avaliação e permitem rastrear as evidências. Alguns valores de `review_id` se repetem, mas a combinação dos dois campos é única nos registros selecionados.
 
 Avaliações sem título e sem mensagem ficam fora da base textual porque a nota, isoladamente, não explica os motivos de satisfação ou insatisfação. Elas podem contribuir para análises quantitativas, mas não fornecem relatos para fundamentar as respostas do RAG.
 
@@ -56,7 +67,11 @@ Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/indexar_avaliacoes.py data/avaliacoes.jsonl data/chroma_completo --limite 42687
+
+
 .\.venv\Scripts\python.exe scripts/verificar_indice.py data/avaliacoes.jsonl data/chroma_completo
+
+
 .\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 ```
 
@@ -88,16 +103,19 @@ Os resultados são de uma execução com exemplos fictícios e podem variar entr
 
 O objetivo é verificar se a busca recupera avaliações úteis e se a resposta gerada é coerente com os relatos recuperados.
 
-Para avaliar a recuperação e a geração de respostas em conjunto, use o banco indexado:
+Use o banco indexado para avaliar a recuperação e a geração de respostas:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas ocorreram na entrega?"
+
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais aspectos da experiência de compra os clientes elogiam?"
+
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Qual é a cotação do dólar hoje?"
+
 .\.venv\Scripts\python.exe scripts/responder.py data/chroma_completo "Quais problemas de entrega são mais frequentes em toda a base?"
 ```
 
-A aplicação recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
+O Script recupera avaliações no Chroma e envia a pergunta e os comentários recuperados à API da NVIDIA. A resposta é exibida junto das avaliações e seus identificadores. 
 
 A busca retorna um conjunto limitado de avaliações relevantes e não calcula totais ou frequências de temas em toda a base.
 
