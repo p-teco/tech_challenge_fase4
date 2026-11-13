@@ -23,8 +23,7 @@ Ao receber uma pergunta, a aplicação gera seu vetor com o mesmo modelo e busca
 
 Com Python 3 instalado, execute o comando abaixo informando o caminho para o arquivo de avaliações da base Olist:
 
-Base disponivel em [Kaggle](
-https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data)
+Baixe a base no [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data) e extraia o arquivo `olist_order_reviews_dataset.csv`.
 
 ```powershell
 python scripts/explorar_avaliacoes.py caminho/olist_order_reviews_dataset.csv
@@ -45,6 +44,8 @@ python scripts/preparar_avaliacoes.py caminho/olist_order_reviews_dataset.csv da
 ```
 
 Cada linha contém os identificadores da avaliação e do pedido, a nota e o texto formado pelo título e pela mensagem disponíveis. O script interrompe a preparação se faltar um identificador, se um par se repetir ou se a nota for inválida.
+
+Na preparação, espaços no início e no fim dos campos são removidos. Títulos ou mensagens ausentes são ignorados; quando ambos estão ausentes, a avaliação não é incluída. Os demais textos são preservados.
 
 A nota pode ajudar a contextualizar comentários ambíguos, inclusive quando parecem positivos apesar de uma avaliação baixa. Ainda assim, ela não comprova ironia nem explica, por si só, o motivo da satisfação ou insatisfação.
 
@@ -74,6 +75,23 @@ Para indexar as avaliações preparadas e conferir os identificadores no banco:
 
 .\.venv\Scripts\python.exe scripts/buscar_avaliacoes.py data/chroma_completo "Quais problemas ocorreram na entrega?"
 ```
+
+Na base utilizada, foram preparados e indexados 42.687 documentos. A verificação dos identificadores não encontrou documentos ausentes nem extras no índice.
+
+## Configuração da API NVIDIA
+
+Para gerar respostas, obtenha uma chave de API na [NVIDIA](https://build.nvidia.com/) e configure a variável na sessão do PowerShell:
+
+```powershell
+$chaveSegura = Read-Host "Chave da API NVIDIA" -AsSecureString
+$ponteiroChave = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($chaveSegura)
+try {
+    $env:NVIDIA_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ponteiroChave)
+} finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ponteiroChave)
+}
+```
+
 
 ## Avaliação
 
@@ -119,7 +137,9 @@ O Script recupera avaliações no Chroma e envia a pergunta e os comentários re
 
 A busca retorna um conjunto limitado de avaliações relevantes e não calcula totais ou frequências de temas em toda a base.
 
-Nos testes com o índice completo, a pergunta sobre elogios retornou relatos de atendimento, produtos e entrega com referências às avaliações. Na pergunta sobre cotação do dólar, a resposta informou que os comentários não continham dados cambiais. Para a pergunta sobre frequência em toda a base, informou que não era possível calcular o ranking a partir dos resultados recuperados.
+Nos testes com o índice completo, a pergunta sobre elogios retornou relatos de atendimento, produtos e entrega com referências às avaliações. Na pergunta sobre cotação do dólar, a busca retornou comentários sobre preços, e a resposta informou que eles não continham dados cambiais. Para a pergunta sobre frequência em toda a base, informou que não era possível calcular o ranking a partir dos resultados recuperados.
+
+Em uma execução da pergunta sobre elogios, a resposta incluiu o trecho: “Uma avaliação cita especificamente ‘interesse em agradar o cliente’ [A6].” A avaliação [A6] recuperada continha: “Interesse em agradar o cliente e ótima mercadoria” (`review_id`: `5f2f81b2c6f71fce0db3c57d0674512f`; `order_id`: `9eedaa8643ebca26e894f58017d00970`). A resposta e a ordem das avaliações podem variar entre execuções.
 
 ### Comparação da recuperação
 
